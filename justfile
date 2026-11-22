@@ -17,7 +17,7 @@ enroll-key:
 
 # Hardware-aware GPU drivers (NVIDIA / AMD / Intel)
 setup-gpu:
-    sudo ./scripts/07-setup-gpu
+    sudo ./scripts/15-setup-gpu
 
 # Swap ffmpeg-free for full FFmpeg and install @multimedia
 swap-ffmpeg:

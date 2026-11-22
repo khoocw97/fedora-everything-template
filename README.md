@@ -1,0 +1,2 @@
+# fedora-everything-template
+

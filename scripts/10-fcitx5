@@ -10,7 +10,7 @@ fi
 . "$(dirname "${BASH_SOURCE[0]}")/common"
 
 dnf install -y fcitx5 fcitx5-chinese-addons fcitx5-configtool fcitx5-rime fcitx5-gtk fcitx5-qt librime librime-lua librime-octagram
-dnf remove -y ibus ibus-anthy ibus-anthy-python ibus-chewing ibus-gtk3 ibus-gtk4 ibus-hangul \
+dnf remove --noautoremove -y ibus ibus-anthy ibus-anthy-python ibus-chewing ibus-gtk3 ibus-gtk4 ibus-hangul \
     ibus-libpinyin ibus-libs ibus-m17n ibus-setup ibus-typing-booster python3-ibus 2>/dev/null || true
 
 color_echo "green" "-> fcitx5 + rime installed, ibus removed"

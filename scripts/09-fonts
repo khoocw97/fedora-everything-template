@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Fonts & locale (no weak deps) - run as root
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+FONT_PKGS=(
+    default-fonts default-fonts-core-emoji default-fonts-cjk-sans
+    google-noto-color-emoji-fonts google-noto-emoji-fonts google-noto-sans-cjk-vf-fonts
+    fira-code-fonts glibc-all-langpacks
+    langpacks-zh_CN langpacks-zh_TW langpacks-fonts-zh_CN langpacks-fonts-zh_TW
+)
+dnf install -y --skip-unavailable --setopt=install_weak_deps=False "${FONT_PKGS[@]}"
+
+color_echo "green" "-> Fonts and locales installed"

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Switch input method from ibus to fcitx5 + rime - run as root
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+dnf install -y fcitx5 fcitx5-chinese-addons fcitx5-configtool fcitx5-rime fcitx5-gtk fcitx5-qt librime librime-lua librime-octagram
+dnf remove -y ibus ibus-anthy ibus-anthy-python ibus-chewing ibus-gtk3 ibus-gtk4 ibus-hangul \
+    ibus-libpinyin ibus-libs ibus-m17n ibus-setup ibus-typing-booster python3-ibus 2>/dev/null || true
+
+color_echo "green" "-> fcitx5 + rime installed, ibus removed"

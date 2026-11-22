@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Flathub + user Flatpaks - run via sudo, installs into the invoking user
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+if [ -z "${ACTUAL_USER:-}" ]; then
+    echo -e "\033[0;31m Error: cannot detect the invoking user, run this script via sudo <user>\033[0m"
+    exit 1
+fi
+
+color_echo "cyan" "Starting to hand over the configuration of Flatpak without permissions to the normal user environment..."
+
+# Initialize and add Flathub as a normal user.
+su - "$ACTUAL_USER" -c "flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+
+# Define the list of Flatpak software to be installed.
+FLATPAK_APPS=(
+    "org.mozilla.firefox"
+    "com.obsproject.Studio"
+    "com.github.tchx84.Flatseal"
+    "it.mijorus.gearlever"
+    "com.github.jeromerobert.pdfarranger"
+    "org.localsend.localsend_app"
+    "io.github.diegopvlk.Cine"
+    "com.github.flxzt.rnote"
+    "com.obsproject.Studio.Plugin.Gstreamer"
+    "com.obsproject.Studio.Plugin.GStreamerVaapi"
+    "io.github.kolunmi.Bazaar"
+    "io.github.flattool.Warehouse"
+    "io.missioncenter.MissionCenter"
+    "org.desktop_plus.desktop-plus"
+    "com.protonvpn.www"
+)
+# Install
+su - "$ACTUAL_USER" -c "flatpak install --user -y flathub ${FLATPAK_APPS[*]}"
+# Automatically fix potential flatpak permission tree issues
+su - "$ACTUAL_USER" -c "flatpak repair --user" 2>/dev/null
+
+color_echo "green" "-> Flatpaks installed"

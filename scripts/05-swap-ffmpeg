@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Swap ffmpeg-free for the full FFmpeg package and pull @multimedia - run as root
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+# Replace ffmpeg-free package with the full FFmpeg package.
+rpm -q --quiet ffmpeg-free && dnf swap -y ffmpeg-free ffmpeg --allowerasing
+dnf install -y @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin
+
+color_echo "green" "-> FFmpeg swapped and @multimedia installed"

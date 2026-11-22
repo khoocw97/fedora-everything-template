@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Hardware-aware GPU driver setup (NVIDIA / AMD / Intel) - run as root
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+# --- lspci install ---
+command -v lspci >/dev/null 2>&1 || dnf install -y pciutils
+
+# --- NVIDIA driver (hardware-aware, lspci) ---
+nvidia_gpu_info=$(lspci 2>/dev/null | grep -i nvidia || true)
+if [ -z "$nvidia_gpu_info" ]; then
+    color_echo "yellow" "-> No NVIDIA GPU detected, skipping NVIDIA driver prompt"
+else
+    color_echo "cyan" "NVIDIA GPU detected: $nvidia_gpu_info"
+    color_echo "cyan" "-> Using driver-580 branch (Maxwell/Pascal)"
+    NVIDIA_PKGS="xorg-x11-drv-nvidia-580xx akmod-nvidia-580xx xorg-x11-drv-nvidia-580xx-cuda xorg-x11-drv-nvidia-580xx-cuda-libs"
+    #dnf config-manager addrepo --from-repofile=https://negativo17.org/repos/fedora-nvidia-580.repo
+    #dnf config-manager setopt fedora-nvidia-580.priority=90
+    color_echo "cyan" "-> Installing NVIDIA driver and CUDA components..."
+    dnf install -y $NVIDIA_PKGS
+    color_echo "cyan" "-> Installing NVIDIA hardware acceleration..."
+    dnf install -y libva-nvidia-driver libva-utils vdpauinfo
+    dnf install -y xorg-x11-drv-nvidia-580xx-power
+    systemctl enable nvidia-{suspend,resume,hibernate}
+    color_echo "green" "-> NVIDIA driver and libva-nvidia-driver installed"
+fi
+
+# --- AMD mesa freeworld (hardware-aware, lspci) ---
+amd_gpu_info=$(lspci 2>/dev/null | grep -i -E "amd|radeon" | grep -i -E "graphics|vga|display" || true)
+if [ -z "$amd_gpu_info" ]; then
+    color_echo "yellow" "-> No AMD GPU detected, skipping AMD mesa freeworld swap"
+else
+    color_echo "cyan" "AMD GPU detected: $amd_gpu_info"
+    color_echo "cyan" "-> Installing mesa freeworld drivers..."
+    dnf install -y mesa-va-drivers-freeworld mesa-va-drivers-freeworld.i686
+    dnf swap -y mesa-vulkan-drivers{,-freeworld}
+    dnf swap -y mesa-vulkan-drivers{,-freeworld}.i686
+    color_echo "green" "-> mesa freeworld installed"
+fi
+
+# --- Intel VAAPI driver ---
+intel_gpu_info=$(lspci 2>/dev/null | grep -i "intel" | grep -i -E "graphics|vga|display|arc" || true)
+if [ -z "$intel_gpu_info" ]; then
+    color_echo "yellow" "-> No Intel GPU detected, skipping Intel VAAPI driver prompt"
+else
+    color_echo "cyan" "Intel GPU detected: $intel_gpu_info"
+    color_echo "cyan" "-> Installing libva-intel-driver (older 1st-4th Gen)..."
+    dnf install -y libva-intel-driver libva-intel-driver.i686
+    color_echo "green" "-> libva-intel-driver installed"
+fi

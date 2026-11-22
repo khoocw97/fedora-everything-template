@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# DVD playback: RPM Fusion tainted repos + libdvdcss - run as root
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+# tainted repo definitions (requires RPM Fusion free/nonfree, see 03-setup-dnf repo)
+dnf install -y rpmfusion-free-release-tainted rpmfusion-nonfree-release-tainted
+
+# libdvdcss is only shipped in the free tainted repo
+dnf install -y libdvdcss
+
+color_echo "green" "-> libdvdcss installed"

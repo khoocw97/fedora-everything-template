@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Google Chrome repo, COPR repos and base packages - run as root
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+# === Google Chrome repo ===
+cat >/etc/yum.repos.d/google-chrome.repo <<'EOF'
+[google-chrome]
+name=google-chrome
+baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64
+enabled=1
+gpgcheck=1
+gpgkey=https://dl.google.com/linux/linux_signing_key.pub
+EOF
+
+# === Enable COPR ===
+COPR_REPOS=(
+    "lihaohong/yazi"
+    "imput/helium"
+    "khoocw97/software"  # personal software
+    "lizardbyte/stable"  # sunshine
+    "atim/starship"      # starship prompt
+)
+for repo in "${COPR_REPOS[@]}"; do
+    dnf copr enable "$repo" -y
+done
+
+BASE_PKGS=(
+    iwlwifi-dvm-firmware iwlwifi-mld-firmware iwlwifi-mvm-firmware # intel wifi card
+    ddcutil brightnessctl fastfetch usbutils git wget curl rsync chezmoi make just starship ripgrep fd-find zoxide eza fzf gum bat duf aria2 # tools
+    oo7-daemon oo7-portal pam_oo7 # keyring (Fedora 45 default, replaces gnome-keyring)
+    adw-gtk3-theme # unified theme
+    xdg-user-dirs power-profiles-daemon # xdg user dirs / power profiles
+    flatpak glibc-langpack-zh glibc-langpack-en # Flatpak & locale
+    fuse fuse-libs # AppImage support
+    pipewire wireplumber alsa-utils pulseaudio-utils # Sound
+    cups gutenprint gutenprint-cups sane-backends # Printer&Scanner for Canon e400 series
+    udiskie # auto-mount
+    zram-generator
+    swayimg
+)
+dnf install -y --skip-unavailable "${BASE_PKGS[@]}"
+
+# personal packages
+dnf install -y google-chrome-stable xournalpp kitty kdeconnectd fuzzel
+
+# === COPR-hosted apps via aria2 (multi-connection download) ===
+# COPR serves package files from copr-pulp-prod.s3.amazonaws.com (no CDN
+# edge); the connection is throttled to ~50-100 KiB/s and dnf cannot split a
+# single file across connections. aria2c (-x16) lifts that to ~1 MiB/s.
+# Download them locally, then install from /tmp.
+COPR_PKGS=(sunshine helium-bin yazi bibata-cursor-themes papirus-icon maple-mono-fonts lxgw-fonts luciole)
+URLS=/tmp/coprpkg.urls.txt
+DL_DIR=/tmp/coprpkg
+
+: >"$URLS"
+for p in "${COPR_PKGS[@]}"; do
+    dnf repoquery --location "$p" 2>/dev/null | grep -E '(x86_64|noarch)\.rpm$' | sort -V | tail -1 >>"$URLS" || true
+done
+
+if [ -s "$URLS" ]; then
+    mkdir -p "$DL_DIR"
+    aria2c -c -i "$URLS" -j3 -x16 -s16 -k1M -d "$DL_DIR" || true
+fi
+
+if compgen -G "$DL_DIR/*.rpm" >/dev/null; then
+    dnf install -y "$DL_DIR"/*.rpm
+    rm -rf "$DL_DIR"
+fi
+
+# Anything aria2 didn't fetch (or everything, if it failed) still gets installed;
+dnf install -y --skip-unavailable "${COPR_PKGS[@]}"
+
+color_echo "green" "-> Chrome repo, COPR repos and base packages installed"
+
+# Mega-CLI
+FEDORA_VERSION=$(rpm -E %fedora)
+dnf install -y "https://mega.nz/linux/repo/Fedora_${FEDORA_VERSION}/x86_64/megacmd-Fedora_${FEDORA_VERSION}.x86_64.rpm"
+
+# OnlyOffice DesktopEditors
+dnf install -y https://github.com/ONLYOFFICE/DesktopEditors/releases/latest/download/onlyoffice-desktopeditors.x86_64.rpm
+
+# Zed / Opencode
+if [ -z "${ACTUAL_USER:-}" ]; then
+    color_echo "red" "-> Cannot detect the invoking user, skipping Zed/opencode"
+else
+    color_echo "cyan" "-> Installing Zed editor for $ACTUAL_USER..."
+    su - "$ACTUAL_USER" -c "curl -f https://zed.dev/install.sh | sh"
+    color_echo "green" "-> Zed installed"
+
+    color_echo "cyan" "-> Installing opencode for $ACTUAL_USER..."
+    su - "$ACTUAL_USER" -c "curl -fsSL https://opencode.ai/v2/install | bash"
+    color_echo "green" "-> opencode installed"
+fi

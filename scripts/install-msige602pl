@@ -1,0 +1,89 @@
+#!/bin/bash
+# =====================================================================
+# Fedora System Optimization, Hardware Setup & Application Installer
+# =====================================================================
+
+# Ensure the script runs with root/sudo privileges
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+# Color output function
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+# Directory of this script, so the config/ service/ script/ folders work from any CWD
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║             FEDORA SYSTEM INTEGRATED SETUP SCRIPT             ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo "Preparing to configure the system for regular user: $ACTUAL_USER..."
+echo ""
+
+# System upgrade
+color_echo "cyan" "[1/14] Performing a system upgrade..."
+dnf up -y
+
+# Set Hostname
+color_echo "cyan" "[2/14] Setting the system hostname..."
+color_echo "green" "Changing the hostname to: msi-pc ..."
+hostnamectl set-hostname msi-pc
+
+# Optimized DNF package manager
+color_echo "cyan" "[3/14] Optimizing DNF configuration files..."
+"$SCRIPT_DIR/03-setup-dnf"
+
+# RPM Fusion
+color_echo "cyan" "[4/14] Enabling RPM Fusion..."
+# (check 03-setup-dnf for the metalink/baseurl handling)
+"$SCRIPT_DIR/03-setup-dnf" repo
+
+# Multimedia decoder
+color_echo "cyan" "[5/14] Enabling full-ffmpeg..."
+"$SCRIPT_DIR/05-swap-ffmpeg"
+
+# DVD playback (tainted repos + libdvdcss)
+color_echo "cyan" "[6/14] Installing DVD playback support..."
+"$SCRIPT_DIR/06-dvd"
+
+# GPU drivers (NVIDIA / AMD / Intel)
+color_echo "cyan" "[7/14] Installing GPU Driver..."
+"$SCRIPT_DIR/07-setup-gpu"
+
+# Installation of core applications and tools
+color_echo "cyan" "[8/14] Installing packages..."
+"$SCRIPT_DIR/08-packages"
+
+# Fonts & locale
+color_echo "cyan" "[9/14] Installing fonts..."
+"$SCRIPT_DIR/09-fonts"
+
+# fcitx5 + rime
+color_echo "cyan" "[10/14] Installing IME..."
+"$SCRIPT_DIR/10-fcitx5"
+
+# Display manager + theme
+color_echo "cyan" "[11/14] Installing sddm..."
+"$SCRIPT_DIR/11-sddm"
+
+# --- Compositor: umbriel + noctalia ---
+color_echo "cyan" "[12/14] Installing window manager and shell..."
+"$SCRIPT_DIR/12-window-manager"
+
+# === Flatpak / Flathub (user environment) ===
+color_echo "cyan" "[13/14] Installing Flatpaks..."
+"$SCRIPT_DIR/13-flatpak"
+
+# System files + services
+color_echo "cyan" "[14/14] Finalizing system settings..."
+"$SCRIPT_DIR/14-finalize"
+
+echo ""
+color_echo "green" "======================================================="
+color_echo "green" "Setup complete."
+color_echo "green" "======================================================="
+
+# --- Reboot ---
+color_echo "green" "Rebooting..."
+reboot

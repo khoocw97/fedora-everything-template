@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Apply system_files/etc -> / and enable system services - run as root
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+if [ -z "${ACTUAL_USER:-}" ]; then
+    echo -e "\033[0;31m Error: cannot detect the invoking user, run this script via sudo <user>\033[0m"
+    exit 1
+fi
+
+as_user() {
+    su - "$ACTUAL_USER" -c "$1"
+}
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../system_files" && pwd)"
+color_echo "cyan" "-> Installing system files from $ROOT..."
+for d in etc usr; do
+    [ -d "$ROOT/$d" ] || continue
+    cp -a "$ROOT/$d/." /
+done
+color_echo "green" "-> System files installed"
+
+# --- Firewall: mDNS, KDE Connect, LocalSend, Sunshine ---
+if command -v firewall-offline-cmd >/dev/null 2>&1; then
+    for zone in home public; do
+        # mDNS (5353/udp, host discovery)
+        firewall-offline-cmd --zone="$zone" --add-service=mdns
+        # KDE Connect (1714-1764/tcp+udp)
+        firewall-offline-cmd --zone="$zone" --add-service=kdeconnect
+        # LocalSend (53317/tcp+udp)
+        firewall-offline-cmd --zone="$zone" --add-port=53317/tcp
+        firewall-offline-cmd --zone="$zone" --add-port=53317/udp
+        # Sunshine (47984/47989/47990/48010 tcp, 47998-48000/48002/48010 udp)
+        firewall-offline-cmd --zone="$zone" --add-port=47984/tcp --add-port=47989/tcp \
+            --add-port=47990/tcp --add-port=48010/tcp
+        firewall-offline-cmd --zone="$zone" --add-port=47998-48000/udp \
+            --add-port=48002/udp --add-port=48010/udp
+    done
+    # apply permanent rules to the running firewalld
+    firewall-cmd --reload
+    color_echo "green" "-> Firewall rules applied"
+else
+    color_echo "yellow" "-> firewalld not installed, skipping firewall rules"
+fi
+
+# --- Dotfiles ---
+as_user 'DEST="$HOME/Project/dotfiles"; if [ -d "$DEST/.git" ]; then echo "-> $DEST already cloned, skipping"; else install -d "$(dirname "$DEST")"; git clone https://github.com/khoocw97/dotfiles.git "$DEST"; fi'
+color_echo "green" "-> Dotfiles ready"
+
+# --- Flatpak overrides ---
+# Grant xournalpp access to host config dir
+as_user "flatpak override --user --filesystem=xdg-config/xournalpp com.github.xournalpp.xournalpp"
+# Grant OBS access to host config dir
+as_user "flatpak override --user --filesystem=xdg-config/obs-studio com.obsproject.Studio"
+# Set wechat use wayland & fix chinese input
+as_user "flatpak override --user --socket=wayland com.tencent.WeChat"
+as_user "flatpak override --user --env=QT_IM_MODULE=fcitx --env=GTK_IM_MODULE=fcitx com.tencent.WeChat"
+# Grant firefox access to host documents dir
+as_user "flatpak override --user --filesystem=xdg-documents org.mozilla.firefox"
+color_echo "green" "-> Flatpak overrides applied"
+
+# oo7 daemon is disabled by default (no preset, no D-Bus activation);
+# without it pam_oo7 drops the login password and the keyring stays locked
+systemctl --global enable oo7-daemon.service
+
+systemctl enable --now cups
+# Add user to lp group
+usermod -aG lp "$ACTUAL_USER"
+
+# Fedora desktop images already default to graphical.target; this only
+# matters when installing on top of a minimal/server install.
+systemctl set-default graphical.target
+systemctl enable sddm
+color_echo "green" "-> Finalized"

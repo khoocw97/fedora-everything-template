@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Compositor: umbriel + noctalia - run as root
+set -euo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[0;31m Error: Please run this script with sudo!\033[0m"
+    exit 1
+fi
+
+. "$(dirname "${BASH_SOURCE[0]}")/common"
+
+dnf install -y umbriel noctalia-git xdg-desktop-portal-umbriel
+
+color_echo "green" "-> Umbriel and Noctalia installed"

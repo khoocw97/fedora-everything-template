@@ -18,6 +18,16 @@ as_user() {
     su - "$ACTUAL_USER" -c "$1"
 }
 
+# Set this before any optional step below can fail: otherwise a broken
+# firewall/dotfiles/flatpak step leaves the box at multi-user.target.
+systemctl set-default graphical.target
+systemctl enable sddm
+
+# oo7 daemon is disabled by default (no preset, no D-Bus activation);
+# without it pam_oo7 drops the login password and the keyring stays locked
+systemctl --global enable oo7-daemon.service
+systemctl enable --now cups
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../system_files" && pwd)"
 color_echo "cyan" "-> Installing system files from $ROOT..."
 for d in etc usr; do
@@ -65,16 +75,7 @@ as_user "flatpak override --user --env=QT_IM_MODULE=fcitx --env=GTK_IM_MODULE=fc
 as_user "flatpak override --user --filesystem=xdg-documents org.mozilla.firefox"
 color_echo "green" "-> Flatpak overrides applied"
 
-# oo7 daemon is disabled by default (no preset, no D-Bus activation);
-# without it pam_oo7 drops the login password and the keyring stays locked
-systemctl --global enable oo7-daemon.service
-
-systemctl enable --now cups
 # Add user to lp group
 usermod -aG lp "$ACTUAL_USER"
 
-# Fedora desktop images already default to graphical.target; this only
-# matters when installing on top of a minimal/server install.
-systemctl set-default graphical.target
-systemctl enable sddm
 color_echo "green" "-> Finalized"

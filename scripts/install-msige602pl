@@ -47,43 +47,39 @@ color_echo "cyan" "[5/14] Enabling full-ffmpeg..."
 color_echo "cyan" "[6/14] Installing DVD playback support..."
 "$SCRIPT_DIR/06-dvd"
 
-# GPU drivers (NVIDIA / AMD / Intel)
-color_echo "cyan" "[7/14] Installing GPU Driver..."
-"$SCRIPT_DIR/07-setup-gpu"
-
 # Installation of core applications and tools
-color_echo "cyan" "[8/14] Installing packages..."
+color_echo "cyan" "[7/14] Installing packages..."
 "$SCRIPT_DIR/08-packages"
 
 # Fonts & locale
-color_echo "cyan" "[9/14] Installing fonts..."
+color_echo "cyan" "[8/14] Installing fonts..."
 "$SCRIPT_DIR/09-fonts"
 
 # fcitx5 + rime
-color_echo "cyan" "[10/14] Installing IME..."
+color_echo "cyan" "[9/14] Installing IME..."
 "$SCRIPT_DIR/10-fcitx5"
 
 # Display manager + theme
-color_echo "cyan" "[11/14] Installing sddm..."
+color_echo "cyan" "[10/14] Installing sddm..."
 "$SCRIPT_DIR/11-sddm"
 
 # --- Compositor: umbriel + noctalia ---
-color_echo "cyan" "[12/14] Installing window manager and shell..."
+color_echo "cyan" "[11/14] Installing window manager and shell..."
 "$SCRIPT_DIR/12-window-manager"
 
 # === Flatpak / Flathub (user environment) ===
-color_echo "cyan" "[13/14] Installing Flatpaks..."
+color_echo "cyan" "[12/14] Installing Flatpaks..."
 "$SCRIPT_DIR/13-flatpak"
 
 # System files + services
-color_echo "cyan" "[14/14] Finalizing system settings..."
-"$SCRIPT_DIR/14-finalize"
+color_echo "cyan" "[13/14] Configure system settings..."
+"$SCRIPT_DIR/14-configuration"
+
+# GPU last: akmod dnf transactions lock the package DB and broke later steps.
+color_echo "cyan" "[14/14] Installing GPU Driver..."
+"$SCRIPT_DIR/15-setup-gpu"
 
 echo ""
 color_echo "green" "======================================================="
 color_echo "green" "Setup complete."
 color_echo "green" "======================================================="
-
-# --- Reboot ---
-color_echo "green" "Rebooting..."
-reboot

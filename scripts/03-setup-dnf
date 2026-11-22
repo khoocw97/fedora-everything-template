@@ -17,7 +17,6 @@ fi
 . "$(dirname "$0")/common"
 
 FEDORA_MIRROR="${FEDORA_MIRROR:-https://sg.mirrors.cicku.me/fedora/linux}"
-#RPMFUSION_MIRROR="${RPMFUSION_MIRROR:-https://mirror.twds.com.tw/rpmfusion}"
 
 if [ ! -f /etc/dnf/dnf.conf ]; then
     color_echo red "-> Error: /etc/dnf/dnf.conf configuration file not found!"
@@ -26,14 +25,14 @@ fi
 
 # dnf5-plugins provides copr/config-manager for dnf5 (Fedora 41+)
 dnf install -y dnf5-plugins
-dnf config-manager setopt max_parallel_downloads=20 timeout=30
+dnf config-manager setopt max_parallel_downloads=20 timeout=60
 color_echo green "-> DNF optimized (max_parallel_downloads=20, timeout=30)"
 
 [ "${1:-}" = "repo" ] || exit 0
 
-# RPM Fusion release packages (idempotent)
-dnf install -y "${RPMFUSION_MIRROR}/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
-dnf install -y "${RPMFUSION_MIRROR}/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
+# RPM Fusion release packages
+dnf install -y 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm'
+dnf install -y 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm'
 dnf install -y 'rpmfusion-*-appstream-data'
 
 # Pin Fedora + RPM Fusion repos to the mirror. Fedora 45 ships the repo files
@@ -48,8 +47,7 @@ OVR_DIR=/etc/dnf/repos.override.d
 install -d "$OVR_DIR"
 shopt -s nullglob
 REPO_FILES=(/usr/share/dnf5/repos.d/fedora.repo
-            /usr/share/dnf5/repos.d/fedora-updates.repo
-            /usr/share/dnf5/repos.d/rpmfusion*.repo)
+            /usr/share/dnf5/repos.d/fedora-updates.repo)
 shopt -u nullglob
 
 if ((${#REPO_FILES[@]} == 0)); then
@@ -65,8 +63,6 @@ for repo_file in "${REPO_FILES[@]}"; do
         -e 's!^#\?mirrorlist=.*!mirrorlist=!' \
         -e 's!^#\?baseurl=!baseurl=!' \
         -e "s!http://download.example/pub/fedora/linux!${FEDORA_MIRROR}!g" \
-        # -e "s!http://download1.rpmfusion.org!${RPMFUSION_MIRROR}!g" \
-        # -e "s!https://download1.rpmfusion.org!${RPMFUSION_MIRROR}!g" \
         "$target"
 done
 color_echo green "-> Repos pinned via $OVR_DIR (metalink cleared, baseurl -> $FEDORA_MIRROR)"

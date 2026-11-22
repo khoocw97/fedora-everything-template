@@ -16,8 +16,8 @@ fi
 
 . "$(dirname "$0")/common"
 
-FEDORA_MIRROR="${FEDORA_MIRROR:-https://mirror.twds.com.tw/fedora/fedora/linux}"
-RPMFUSION_MIRROR="${RPMFUSION_MIRROR:-https://mirror.twds.com.tw/rpmfusion}"
+FEDORA_MIRROR="${FEDORA_MIRROR:-https://sg.mirrors.cicku.me/fedora/linux}"
+#RPMFUSION_MIRROR="${RPMFUSION_MIRROR:-https://mirror.twds.com.tw/rpmfusion}"
 
 if [ ! -f /etc/dnf/dnf.conf ]; then
     color_echo red "-> Error: /etc/dnf/dnf.conf configuration file not found!"
@@ -65,8 +65,8 @@ for repo_file in "${REPO_FILES[@]}"; do
         -e 's!^#\?mirrorlist=.*!mirrorlist=!' \
         -e 's!^#\?baseurl=!baseurl=!' \
         -e "s!http://download.example/pub/fedora/linux!${FEDORA_MIRROR}!g" \
-        -e "s!http://download1.rpmfusion.org!${RPMFUSION_MIRROR}!g" \
-        -e "s!https://download1.rpmfusion.org!${RPMFUSION_MIRROR}!g" \
+        # -e "s!http://download1.rpmfusion.org!${RPMFUSION_MIRROR}!g" \
+        # -e "s!https://download1.rpmfusion.org!${RPMFUSION_MIRROR}!g" \
         "$target"
 done
 color_echo green "-> Repos pinned via $OVR_DIR (metalink cleared, baseurl -> $FEDORA_MIRROR)"

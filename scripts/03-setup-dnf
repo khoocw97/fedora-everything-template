@@ -26,13 +26,14 @@ fi
 # dnf5-plugins provides copr/config-manager for dnf5 (Fedora 41+)
 dnf install -y dnf5-plugins
 dnf config-manager setopt max_parallel_downloads=20 timeout=60
-color_echo green "-> DNF optimized (max_parallel_downloads=20, timeout=30)"
+color_echo green "-> DNF optimized (max_parallel_downloads=20, timeout=60)"
 
 [ "${1:-}" = "repo" ] || exit 0
 
-# RPM Fusion release packages
-dnf install -y 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm'
-dnf install -y 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm'
+# RPM Fusion release packages (double quotes: $(rpm -E %fedora) must expand)
+FEDORA_VER="$(rpm -E %fedora)"
+dnf install -y "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VER}.noarch.rpm"
+dnf install -y "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VER}.noarch.rpm"
 dnf install -y 'rpmfusion-*-appstream-data'
 
 # Pin Fedora + RPM Fusion repos to the mirror. Fedora 45 ships the repo files
@@ -45,6 +46,8 @@ dnf install -y 'rpmfusion-*-appstream-data'
 # To restore stock config: delete /etc/dnf/repos.override.d/*.repo
 OVR_DIR=/etc/dnf/repos.override.d
 install -d "$OVR_DIR"
+# Drop RPM Fusion pins left by the previous version of this script (dead mirror)
+rm -f "$OVR_DIR"/rpmfusion*.repo
 shopt -s nullglob
 REPO_FILES=(/usr/share/dnf5/repos.d/fedora.repo
             /usr/share/dnf5/repos.d/fedora-updates.repo)

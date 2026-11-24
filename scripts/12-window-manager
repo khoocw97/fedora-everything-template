@@ -9,6 +9,6 @@ fi
 
 . "$(dirname "${BASH_SOURCE[0]}")/common"
 
-dnf install -y umbriel noctalia-git xdg-desktop-portal-umbriel
+dnf install -y umbriel noctalia-git xdg-desktop-portal-umbriel xdg-desktop-portal-gtk
 
 color_echo "green" "-> Umbriel and Noctalia installed"
